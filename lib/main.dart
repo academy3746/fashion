@@ -1,3 +1,6 @@
+import 'package:fashion/data/api.dart';
+import 'package:fashion/data/weather.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -29,14 +32,23 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(),
       floatingActionButton: FloatingActionButton(
-        onPressed: (){
+        onPressed: () async {
+          final api = WeatherApi();
 
+          List<Weather> weather = await api.getWeather(1, 1, 20221217, "0500");
+
+          for (final w in weather) {
+            if (kDebugMode) {
+              print(w.date);
+              print(w.time);
+              print(w.tmp);
+            }
+          }
         },
         tooltip: 'Increment',
         child: const Icon(Icons.add),
