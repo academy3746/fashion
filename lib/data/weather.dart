@@ -51,3 +51,19 @@ class Weather {
     );
   }
 }
+
+class LocationData {
+  // 현재 위치
+  String name;
+  // 변수값 x, y
+  int x;
+  int y;
+
+  // 위도
+  double lat;
+
+  // 경도
+  double lng;
+
+  LocationData({this.name, this.x, this.y, this.lat, this.lng});
+}

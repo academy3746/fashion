@@ -1,5 +1,7 @@
 import 'package:fashion/data/api.dart';
 import 'package:fashion/data/weather.dart';
+import 'package:fashion/location.dart';
+import 'package:fashion/utils.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -41,6 +43,11 @@ class _MyHomePageState extends State<MyHomePage> {
 
   List<Weather> weather = [];
 
+  Weather current;
+
+  LocationData location =
+      LocationData(lat: 37.4187416, lng: 126.6826974, name: "우리집", x: 0, y: 0);
+
   List<String> sky = [
     "assets/img/sky01.png",
     "assets/img/sky02.png",
@@ -64,107 +71,207 @@ class _MyHomePageState extends State<MyHomePage> {
 
   int level = 0;
 
+  void getWeather() async {
+    final api = WeatherApi();
+    final now = DateTime.now();
+    Map<String, int> xy = Utils.latLngToXY(location.lat, location.lng);
+
+    int time02 = int.parse("${now.hour}10");
+    String time_ = "";
+
+    if (time02 > 2300) {
+      time_ = "2300";
+    } else if (time02 > 2000) {
+      time_ = "2000";
+    } else if (time02 > 1700) {
+      time_ = "1700";
+    } else if (time02 > 1400) {
+      time_ = "1400";
+    } else if (time02 > 1100) {
+      time_ = "1100";
+    } else if (time02 > 800) {
+      time_ = "0800";
+    } else if (time02 > 500) {
+      time_ = "0500";
+    } else {
+      time_ = "0200";
+    }
+
+    weather = await api.getWeather(xy["nx"], xy["ny"], Utils.getFormatTime(DateTime.now()), time_);
+
+    int time = int.parse("${now.hour}00");
+    weather.removeWhere((w) => w.time < time);
+
+    current = weather.first;
+    level = getLevel(current);
+
+    setState(() {});
+  }
+
+  int getLevel(Weather w) {
+    if (w.sky > 8) {
+      return 3;
+    } else if (w.sky > 5) {
+      return 2;
+    } else if (w.sky > 2) {
+      return 1;
+    }
+
+    return 0;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    getWeather();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: color[level],
-      body: Container(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              height: 50,
-            ),
-            const Text("구로구", textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),),
-            Container(
-              width: 100,
-              height: 100,
-              margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-              alignment: Alignment.centerRight,
-              child: Image.asset(sky[level]),
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                const Text("-8℃", style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),),
-                Column(
-                  children: [
-                    const Text("12월 17일", style: TextStyle(color: Colors.white, fontSize: 14),),
-                    Text(status[level], style: const TextStyle(color: Colors.white, fontSize: 14),),
-                  ],
-                ),
-              ],
-            ),
-            Container(
-              height: 30,
-            ),
-             Container(
-               margin: const EdgeInsets.symmetric(horizontal: 20),
-               child: const Text("오늘 어울리는 옷을 코디해줄게요.", style: TextStyle(color: Colors.white, fontSize: 18),),
-             ),
-            Container(
-              height: 30,
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: List.generate(clothes.length, (idx) {
-                return Container(
-                  padding: const EdgeInsets.all(12),
-                  width: 100,
-                  height: 100,
-                  child: Image.asset(
-                    clothes[idx],
-                    fit: BoxFit.contain,
+      body: weather.isEmpty
+          ? Container(
+              child: const Text("날씨 정보를 로딩중입니다..."),
+            )
+          : Container(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(
+                    height: 50,
                   ),
-                );
-              }),
-            ),
-            Container(
-              height: 15,
-            ),
-            Container(
-              height: 150,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: List.generate(10, (idx) {
-                  return Container(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        const Text("온도", style: TextStyle(color: Colors.white, fontSize: 12),),
-                        const Text("강수확률", style: TextStyle(color: Colors.white, fontSize: 12),),
-                        Container(
-                          width: 50,
-                          height: 50,
-                          alignment: Alignment.centerRight,
-                          child: Image.asset("assets/img/sky01.png"),
-                        ),
-                        const Text("0800", style: TextStyle(color: Colors.white, fontSize: 12),),
-                      ],
+                  Text(
+                    location.name,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold),
+                  ),
+                  Container(
+                    width: 100,
+                    height: 100,
+                    margin: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 20),
+                    alignment: Alignment.centerRight,
+                    child: Image.asset(sky[level]),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      Text(
+                        "${current.tmp}℃",
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold),
+                      ),
+                      Column(
+                        children: [
+                          Text(
+                            "${Utils.stringToDateTime(current.date).month}월 ${Utils.stringToDateTime(current.date).day}일",
+                            style: const TextStyle(color: Colors.white, fontSize: 14),
+                          ),
+                          Text(
+                            status[level],
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 14),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  Container(
+                    height: 30,
+                  ),
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 20),
+                    child: const Text(
+                      "오늘 어울리는 옷을 코디해줄게요.",
+                      style: TextStyle(color: Colors.white, fontSize: 18),
                     ),
-                  );
-                }),
+                  ),
+                  Container(
+                    height: 30,
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: List.generate(clothes.length, (idx) {
+                      return Container(
+                        padding: const EdgeInsets.all(12),
+                        width: 100,
+                        height: 100,
+                        child: Image.asset(
+                          clothes[idx],
+                          fit: BoxFit.contain,
+                        ),
+                      );
+                    }),
+                  ),
+                  Container(
+                    height: 40,
+                  ),
+                  Expanded(
+                    child: Container(
+                      height: 150,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        children: List.generate(weather.length, (idx) {
+
+                          final w = weather[idx];
+                          int level_ = getLevel(w);
+
+                          return Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 10),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Text(
+                                  "${w.tmp}℃",
+                                  style: const TextStyle(
+                                      color: Colors.white, fontSize: 12),
+                                ),
+                                Text(
+                                  "${w.pop}%",
+                                  style: const TextStyle(
+                                      color: Colors.white, fontSize: 12),
+                                ),
+                                Container(
+                                  width: 50,
+                                  height: 50,
+                                  alignment: Alignment.centerRight,
+                                  child: Image.asset(sky[level_]),
+                                ),
+                                Text(
+                                  "${w.time}",
+                                  style: const TextStyle(
+                                      color: Colors.white, fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                      ),
+                    ),
+                  ),
+                  Container(height: 80),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          final api = WeatherApi();
+          LocationData data = await Navigator.of(context)
+              .push(MaterialPageRoute(builder: (ctx) => const LocationPage()));
 
-          List<Weather> weather = await api.getWeather(1, 1, 20221217, "0500");
-
-          for (final w in weather) {
-            if (kDebugMode) {
-              print(w.date);
-              print(w.time);
-              print(w.tmp);
-            }
+          if (data != null) {
+            location = data;
+            getWeather();
           }
         },
         tooltip: 'Increment',
-        child: const Icon(Icons.add),
+        child: const Icon(Icons.location_on),
       ), //
     );
   }
