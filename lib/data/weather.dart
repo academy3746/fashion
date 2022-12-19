@@ -67,3 +67,10 @@ class LocationData {
 
   LocationData({this.name, this.x, this.y, this.lat, this.lng});
 }
+
+class ClothTmp {
+  int tmp;
+  List<String> cloth;
+
+  ClothTmp({this.tmp, this.cloth});
+}

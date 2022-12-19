@@ -1,8 +1,9 @@
+import 'package:fashion/cloth.dart';
 import 'package:fashion/data/api.dart';
+import 'package:fashion/data/preference.dart';
 import 'package:fashion/data/weather.dart';
 import 'package:fashion/location.dart';
 import 'package:fashion/utils.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -43,6 +44,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   List<Weather> weather = [];
 
+  List<ClothTmp> clothTmp = [];
+
   Weather current;
 
   LocationData location =
@@ -56,8 +59,8 @@ class _MyHomePageState extends State<MyHomePage> {
   ];
 
   List<String> status = [
-    "날이 아주 좋아요!",
-    "가벼운 산책은 어떤가요?",
+    "구름 한 점 없이 맑은 하늘이에요!",
+    "요거트구름..?",
     "오늘은 조금 흐리네요.",
     "감성 발라드로 우중충한 기분을 날려버리세요!"
   ];
@@ -75,6 +78,9 @@ class _MyHomePageState extends State<MyHomePage> {
     final api = WeatherApi();
     final now = DateTime.now();
     Map<String, int> xy = Utils.latLngToXY(location.lat, location.lng);
+
+    final pref = Preference();
+    clothTmp = await pref.getTmp();
 
     int time02 = int.parse("${now.hour}10");
     String time_ = "";
@@ -103,6 +109,9 @@ class _MyHomePageState extends State<MyHomePage> {
     weather.removeWhere((w) => w.time < time);
 
     current = weather.first;
+
+    clothes = clothTmp.firstWhere((t) => t.tmp < current.tmp).cloth;
+
     level = getLevel(current);
 
     setState(() {});
@@ -129,137 +138,148 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          IconButton(
+              onPressed: () async {
+                await Navigator.of(context).push(MaterialPageRoute(
+                    builder: (ctx) => const ClothPage()
+                ));
+                getWeather();
+              },
+              icon: const Icon(Icons.category),
+          )
+        ],
+      ),
       backgroundColor: color[level],
       body: weather.isEmpty
-          ? Container(
-              child: const Text("날씨 정보를 로딩중입니다..."),
-            )
-          : Container(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+          ? const Text("날씨 정보를 로딩중입니다...")
+          : Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                height: 50,
+              ),
+              Text(
+                location.name,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold),
+              ),
+              Container(
+                width: 100,
+                height: 100,
+                margin: const EdgeInsets.symmetric(
+                    horizontal: 20, vertical: 20),
+                alignment: Alignment.centerRight,
+                child: Image.asset(sky[level]),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  Container(
-                    height: 50,
-                  ),
                   Text(
-                    location.name,
-                    textAlign: TextAlign.center,
+                    "${current.tmp}℃",
                     style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 20,
+                        fontSize: 32,
                         fontWeight: FontWeight.bold),
                   ),
-                  Container(
-                    width: 100,
-                    height: 100,
-                    margin: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 20),
-                    alignment: Alignment.centerRight,
-                    child: Image.asset(sky[level]),
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  Column(
                     children: [
                       Text(
-                        "${current.tmp}℃",
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold),
+                        "${Utils.stringToDateTime(current.date).month}월 ${Utils.stringToDateTime(current.date).day}일",
+                        style: const TextStyle(color: Colors.white, fontSize: 14),
                       ),
-                      Column(
-                        children: [
-                          Text(
-                            "${Utils.stringToDateTime(current.date).month}월 ${Utils.stringToDateTime(current.date).day}일",
-                            style: const TextStyle(color: Colors.white, fontSize: 14),
-                          ),
-                          Text(
-                            status[level],
-                            style: const TextStyle(
-                                color: Colors.white, fontSize: 14),
-                          ),
-                        ],
+                      Text(
+                        status[level],
+                        style: const TextStyle(
+                            color: Colors.white, fontSize: 14),
                       ),
                     ],
                   ),
-                  Container(
-                    height: 30,
-                  ),
-                  Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 20),
-                    child: const Text(
-                      "오늘 어울리는 옷을 코디해줄게요.",
-                      style: TextStyle(color: Colors.white, fontSize: 18),
+                ],
+              ),
+              Container(
+                height: 30,
+              ),
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 20),
+                child: const Text(
+                  "오늘 어울리는 옷을 코디해줄게요.",
+                  style: TextStyle(color: Colors.white, fontSize: 18),
+                ),
+              ),
+              Container(
+                height: 30,
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: List.generate(clothes.length, (idx) {
+                  return Container(
+                    padding: const EdgeInsets.all(12),
+                    width: 100,
+                    height: 100,
+                    child: Image.asset(
+                      clothes[idx],
+                      fit: BoxFit.contain,
                     ),
-                  ),
-                  Container(
-                    height: 30,
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: List.generate(clothes.length, (idx) {
+                  );
+                }),
+              ),
+              Container(
+                height: 40,
+              ),
+              Expanded(
+                child: SizedBox(
+                  height: 150,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: List.generate(weather.length, (idx) {
+
+                      final w = weather[idx];
+                      int level_ = getLevel(w);
+
                       return Container(
-                        padding: const EdgeInsets.all(12),
-                        width: 100,
-                        height: 100,
-                        child: Image.asset(
-                          clothes[idx],
-                          fit: BoxFit.contain,
+                        margin: const EdgeInsets.symmetric(horizontal: 10),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              "${w.tmp}℃",
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 12),
+                            ),
+                            Text(
+                              "${w.pop}%",
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 12),
+                            ),
+                            Container(
+                              width: 50,
+                              height: 50,
+                              alignment: Alignment.centerRight,
+                              child: Image.asset(sky[level_]),
+                            ),
+                            Text(
+                              "${w.time}",
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 12),
+                            ),
+                          ],
                         ),
                       );
                     }),
                   ),
-                  Container(
-                    height: 40,
-                  ),
-                  Expanded(
-                    child: Container(
-                      height: 150,
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        children: List.generate(weather.length, (idx) {
-
-                          final w = weather[idx];
-                          int level_ = getLevel(w);
-
-                          return Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 10),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Text(
-                                  "${w.tmp}℃",
-                                  style: const TextStyle(
-                                      color: Colors.white, fontSize: 12),
-                                ),
-                                Text(
-                                  "${w.pop}%",
-                                  style: const TextStyle(
-                                      color: Colors.white, fontSize: 12),
-                                ),
-                                Container(
-                                  width: 50,
-                                  height: 50,
-                                  alignment: Alignment.centerRight,
-                                  child: Image.asset(sky[level_]),
-                                ),
-                                Text(
-                                  "${w.time}",
-                                  style: const TextStyle(
-                                      color: Colors.white, fontSize: 12),
-                                ),
-                              ],
-                            ),
-                          );
-                        }),
-                      ),
-                    ),
-                  ),
-                  Container(height: 80),
-                ],
+                ),
               ),
-            ),
+              Container(height: 20),
+            ],
+          ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           LocationData data = await Navigator.of(context)
